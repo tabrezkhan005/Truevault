@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.documents.models import Document
+from apps.documents.models import Document, Grant
 
 
 class DocumentSerializer(serializers.ModelSerializer):
@@ -56,3 +56,40 @@ class DocumentUploadSerializer(serializers.Serializer):
     name = serializers.CharField(required=False, allow_blank=True, max_length=120)
     category = serializers.CharField(required=False, allow_blank=True, max_length=64)
     # Intentionally not accepted: owner/role must never come from the client.
+
+
+class DocumentMetadataPatchSerializer(serializers.Serializer):
+    name = serializers.CharField(required=False, allow_blank=False, max_length=120)
+    category = serializers.CharField(required=False, allow_blank=True, max_length=64)
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError("Provide name and/or category")
+        return attrs
+
+
+class DocumentContentPutSerializer(serializers.Serializer):
+    file = serializers.FileField()
+
+
+class GrantSerializer(serializers.ModelSerializer):
+    user_id = serializers.UUIDField(source="user.id", read_only=True)
+    user_email = serializers.EmailField(source="user.email", read_only=True)
+    granted_by_id = serializers.UUIDField(source="granted_by.id", read_only=True)
+
+    class Meta:
+        model = Grant
+        fields = (
+            "id",
+            "user_id",
+            "user_email",
+            "level",
+            "granted_by_id",
+            "created_at",
+        )
+        read_only_fields = fields
+
+
+class GrantWriteSerializer(serializers.Serializer):
+    user_id = serializers.UUIDField()
+    level = serializers.ChoiceField(choices=Grant.Level.choices)

@@ -1,9 +1,9 @@
-Entries: 4 total | Authorisation/access-control/audit entries: 1 (need >= 2)
+Entries: 5 total | Authorisation/access-control/audit entries: 2 (need >= 2)
 
 ## Tools used
 
 - **Claude (planning/advice):** challenge planning, scaffolding guidance, project rules and documentation structure.
-- **Cursor editor agent (code):** Django backend settings, custom User model, environment files, root docs, and Phase 1 core security model (audit chain, documents/grants authz, auth + document APIs, tests).
+- **Cursor editor agent (code):** Django backend settings, custom User model, environment files, root docs, Phase 1 core security model, and Phase 2 (grants, edit, search, admin, seed, health, view audit action).
 
 ## Reused context
 
@@ -43,10 +43,18 @@ Entries: 4 total | Authorisation/access-control/audit entries: 1 (need >= 2)
 - Fixed: n/a yet
 - Commit: TODO(you): paste commit link
 
+### Entry 5 - 2026-10-22 ~09:59 IST - Phase 2 grants/edit/search/admin + view/health/NUM_PROXIES [tag: authz]
+
+- Asked: Continue Phase 2; add audit action `view` for document detail; `NUM_PROXIES` from env (default 0); `/api/health/` AllowAny with no audit/DB writes; grants, lookup, edit, search, admin APIs, `seed_demo`, extended tests, draft `THREATS.md`.
+- Produced: grants/edit/search/admin/lookup/health/seed_demo; `view` audit action; settings `NUM_PROXIES`; filled `THREATS.md`; tests in `tests/test_phase2.py` and updates to matrix/api_surface. `pytest -q`: 44 passed, 1 skipped. `seed_demo` and `verify_audit_chain` ran OK.
+- Wrong: TODO(you): review and fill in
+- Fixed: n/a yet
+- Commit: TODO(you): paste commit link
+
 ## Open items
 
-- TODO(you): review Entries 1–4 wording and fill "Wrong" where still TODO.
-- TODO(you): paste commit links for Entries 1–4.
-- Phase 2 not started (grants API, edit, search, admin, seed_demo, extended matrix).
-- Authorisation/access-control/audit PROMPTS entries: 1 so far (need >= 2 before challenge end).
-- `pip freeze > requirements.txt` still may be stale from early setup — refresh when you want a clean lock of current venv.
+- TODO(you): review Entries 1–5 wording and fill "Wrong" where still TODO.
+- TODO(you): paste commit links for Entries 1–5.
+- TODO(you): set production `NUM_PROXIES` after measuring the Render/Vercel proxy chain; note residual risk in `THREATS.md`.
+- Frontend / deployment / AI suggest feature not built yet.
+- `pip freeze > requirements.txt` may still be worth refreshing when you next touch deps.

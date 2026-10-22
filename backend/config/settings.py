@@ -149,6 +149,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Django REST Framework
+# How many reverse proxies sit in front of Django. Set after measuring the
+# deployed chain so REMOTE_ADDR / throttle identity is correct. Default 0
+# (trust REMOTE_ADDR only; do not trust X-Forwarded-For until configured).
+NUM_PROXIES = int(os.environ.get('NUM_PROXIES', '0'))
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.SessionAuthentication',
@@ -163,9 +168,11 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'user': '300/hour',
         'login': '10/min',
-        # Phase 1: scope required by download view; rate chosen conservatively.
+        # Scope required by download view; rate chosen conservatively.
         'download': '60/hour',
+        'lookup': '30/min',
     },
+    'NUM_PROXIES': NUM_PROXIES,
 }
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024  # 6 MB

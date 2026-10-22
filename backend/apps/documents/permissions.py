@@ -57,9 +57,9 @@ def effective_level(user, document) -> str:
     return grant.level
 
 
-# Map authorize() actions onto AuditEvent.action choices (no separate "read").
+# Map authorize() actions onto AuditEvent.action choices.
 _AUDIT_ACTION = {
-    "read": AuditEvent.Action.LIST,
+    "read": AuditEvent.Action.VIEW,
     "download": AuditEvent.Action.DOWNLOAD,
     "edit": AuditEvent.Action.EDIT,
     "delete": AuditEvent.Action.DELETE,
@@ -125,4 +125,17 @@ class IsAdminRole(BasePermission):
             and user.is_authenticated
             and user.is_active
             and getattr(user, "role", None) == "admin"
+        )
+
+
+class IsOwnerOrAdminRole(BasePermission):
+    """Who may call: authenticated active owner or admin (e.g. email lookup)."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and user.is_active
+            and getattr(user, "role", None) in ("owner", "admin")
         )

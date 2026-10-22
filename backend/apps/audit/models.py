@@ -36,6 +36,7 @@ class AuditEvent(models.Model):
         ROLE_CHANGE = "role_change", "role_change"
         USER_DEACTIVATE = "user_deactivate", "user_deactivate"
         LIST = "list", "list"
+        VIEW = "view", "view"
         SEARCH = "search", "search"
         AI_SUGGEST = "ai_suggest", "ai_suggest"
         AI_DECISION = "ai_decision", "ai_decision"

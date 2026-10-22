@@ -63,15 +63,12 @@ def test_document_access_matrix(
             assert AuditEvent.objects.filter(
                 document_id=doc_id,
                 outcome=AuditEvent.Outcome.ALLOWED,
-                action=AuditEvent.Action.LIST,
+                action=AuditEvent.Action.VIEW,
             ).exists()
         elif detail_status == 404:
             assert AuditEvent.objects.filter(
-                document_id=doc_id,
+                action=AuditEvent.Action.VIEW,
                 outcome=AuditEvent.Outcome.DENIED,
-            ).exists() or AuditEvent.objects.filter(
-                outcome=AuditEvent.Outcome.DENIED,
-                reason="not_found_or_no_grant",
             ).exists()
 
     download = client.get(f"/api/documents/{doc_id}/download/")
