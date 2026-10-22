@@ -162,6 +162,9 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_THROTTLE_RATES': {
         'user': '300/hour',
+        'login': '10/min',
+        # Phase 1: scope required by download view; rate chosen conservatively.
+        'download': '60/hour',
     },
 }
 
