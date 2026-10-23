@@ -1,9 +1,9 @@
-Entries: 5 total | Authorisation/access-control/audit entries: 2 (need >= 2)
+Entries: 6 total | Authorisation/access-control/audit entries: 3 (need >= 2)
 
 ## Tools used
 
 - **Claude (planning/advice):** challenge planning, scaffolding guidance, project rules and documentation structure.
-- **Cursor editor agent (code):** Django backend settings, custom User model, environment files, root docs, Phase 1 core security model, and Phase 2 (grants, edit, search, admin, seed, health, view audit action).
+- **Cursor editor agent (code):** Django backend settings, custom User model, environment files, root docs, Phase 1–2 APIs/tests, and Postgres audit-trigger migration fix (`params=None`, TRUNCATE trigger, postgres marker tests, remove Django `/admin/` route).
 
 ## Reused context
 
@@ -51,10 +51,18 @@ Entries: 5 total | Authorisation/access-control/audit entries: 2 (need >= 2)
 - Fixed: n/a yet
 - Commit: TODO(you): paste commit link
 
+### Entry 6 - 2026-10-23 ~12:47 IST - Fix Postgres audit trigger migration + TRUNCATE [tag: audit]
+
+- Asked: Fix `0002` migrate failure on Render (`incomplete placeholder: '%'`): pass `params=None` on `schema_editor.execute`; add TRUNCATE defence in new `0003` if missing; add `postgres` pytest marker and Postgres-only trigger/concurrency tests; report Django `/admin/` exposure and remove if safe; run SQLite `pytest -q`; give PowerShell commands for local Postgres (agent must not hit remote DB).
+- Produced: `0002` execute calls use `params=None` (trigger SQL unchanged); `0003_auditevent_truncate_trigger.py`; `postgres` marker + four Postgres tests; removed Django `/admin/` route; `test_django_admin_route_not_mounted`. Local SQLite: `pytest -q` → 45 passed, 4 skipped. Postgres tests were NOT run in this environment.
+- Wrong: The migration crashed on first real Postgres run because the Postgres-only code path had never executed in tests (skipped on SQLite). Cause verified in file: RAISE EXCEPTION message contains a literal `%` for `TG_OP`, which Django/psycopg treated as a bind placeholder when `params` defaulted to `()`.
+- Fixed: `params=None` so SQL is sent unprocessed; added statement-level BEFORE TRUNCATE trigger in `0003`; tests now auto-run when `DATABASES` engine is postgresql.
+- Commit: TODO(you)
+
 ## Open items
 
-- TODO(you): review Entries 1–5 wording and fill "Wrong" where still TODO.
-- TODO(you): paste commit links for Entries 1–5.
-- TODO(you): set production `NUM_PROXIES` after measuring the Render/Vercel proxy chain; note residual risk in `THREATS.md`.
+- TODO(you): review Entries 1–6 wording and fill "Wrong" where still TODO.
+- TODO(you): paste commit links for Entries 1–6.
+- TODO(you): run the PowerShell Postgres verification commands from Entry 6 report against a throwaway local DB, then redeploy migrate on Render.
+- TODO(you): set production `NUM_PROXIES` after measuring the Render/Vercel proxy chain.
 - Frontend / deployment / AI suggest feature not built yet.
-- `pip freeze > requirements.txt` may still be worth refreshing when you next touch deps.

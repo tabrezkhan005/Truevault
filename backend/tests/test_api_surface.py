@@ -87,3 +87,11 @@ def test_public_routes_use_allow_any():
             assert AllowAny in perms or any(
                 getattr(p, "__name__", "") == "AllowAny" for p in perms
             )
+
+
+@pytest.mark.django_db
+def test_django_admin_route_not_mounted(api_client):
+    """Django's /admin/ UI is not exposed; staff ops use /api/admin/."""
+    response = api_client.get("/admin/")
+    assert response.status_code == 404
+

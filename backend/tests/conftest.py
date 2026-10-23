@@ -1,10 +1,31 @@
 import io
 
 import pytest
+from django.conf import settings
 from rest_framework.test import APIClient
 
 from apps.documents.models import Document, DocumentContent, Grant
 from tests.factories import AdminFactory, OwnerFactory, ViewerFactory
+
+
+def _default_db_is_postgresql() -> bool:
+    engine = settings.DATABASES["default"]["ENGINE"]
+    return "postgresql" in engine
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "postgres: requires PostgreSQL (skipped when DATABASES default is not postgres)",
+    )
+
+
+def pytest_runtest_setup(item):
+    if "postgres" in item.keywords and not _default_db_is_postgresql():
+        pytest.skip(
+            "requires PostgreSQL: set DATABASE_URL to a postgres URL "
+            "(default DATABASES engine is not postgresql)"
+        )
 
 # Minimal 1x1 PNG
 PNG_BYTES = bytes.fromhex(

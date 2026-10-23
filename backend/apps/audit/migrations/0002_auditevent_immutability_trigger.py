@@ -25,13 +25,15 @@ DROP FUNCTION IF EXISTS audit_reject_mutation();
 def apply_trigger(apps, schema_editor):
     if schema_editor.connection.vendor != "postgresql":
         return
-    schema_editor.execute(FORWARD_SQL)
+    # params=None: send SQL unprocessed. The plpgsql RAISE uses '%' as its own
+    # format marker for TG_OP; Django/psycopg must not treat it as a bind param.
+    schema_editor.execute(FORWARD_SQL, params=None)
 
 
 def drop_trigger(apps, schema_editor):
     if schema_editor.connection.vendor != "postgresql":
         return
-    schema_editor.execute(REVERSE_SQL)
+    schema_editor.execute(REVERSE_SQL, params=None)
 
 
 class Migration(migrations.Migration):
