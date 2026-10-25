@@ -1,4 +1,5 @@
 from django.contrib.auth import login, logout
+from django.db import IntegrityError, transaction
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from drf_spectacular.utils import extend_schema
@@ -9,8 +10,13 @@ from rest_framework.views import APIView
 
 from apps.accounts.email_norm import normalise_email
 from apps.accounts.models import User
-from apps.accounts.serializers import LoginSerializer, MeSerializer
-from apps.accounts.throttles import LoginEmailRateThrottle, LoginRateThrottle
+from apps.accounts.serializers import LoginSerializer, MeSerializer, RegisterSerializer
+from apps.accounts.throttles import (
+    LoginEmailRateThrottle,
+    LoginRateThrottle,
+    RegisterEmailRateThrottle,
+    RegisterRateThrottle,
+)
 from apps.audit.models import AuditEvent
 from apps.audit.service import record
 
@@ -69,6 +75,75 @@ class LoginView(APIView):
             outcome=AuditEvent.Outcome.ALLOWED,
         )
         return Response(MeSerializer(user).data)
+
+
+class RegisterView(APIView):
+    """
+    Who may call: anyone (challenge demo signup).
+
+    WHY open with role choice: judges need to create viewer/owner/admin accounts
+    without Shell access. Residual risk: anyone can mint an admin — accepted for
+    this hiring window; throttle + password rules still apply.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [RegisterRateThrottle, RegisterEmailRateThrottle]
+
+    @extend_schema(request=RegisterSerializer, responses={201: MeSerializer})
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"]
+        password = serializer.validated_data["password"]
+        role = serializer.validated_data["role"]
+
+        if User.objects.filter(email=email).exists():
+            record(
+                request,
+                action=AuditEvent.Action.REGISTER,
+                outcome=AuditEvent.Outcome.DENIED,
+                reason="email_taken",
+                detail={"email": email[:254]},
+            )
+            return Response(
+                {"detail": "An account with this email already exists"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            with transaction.atomic():
+                user = User(
+                    email=email,
+                    username=email,
+                    role=role,
+                    is_active=True,
+                    # Staff flag unused (/admin not mounted); keep False always.
+                    is_staff=False,
+                )
+                user.set_password(password)
+                user.save()
+                record(
+                    request,
+                    action=AuditEvent.Action.REGISTER,
+                    outcome=AuditEvent.Outcome.ALLOWED,
+                    target_user=user,
+                    detail={"role": role},
+                )
+        except IntegrityError:
+            return Response(
+                {"detail": "An account with this email already exists"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        request.session.cycle_key()
+        record(
+            request,
+            action=AuditEvent.Action.LOGIN,
+            outcome=AuditEvent.Outcome.ALLOWED,
+        )
+        return Response(MeSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
 class LogoutView(APIView):

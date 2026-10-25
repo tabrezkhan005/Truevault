@@ -135,6 +135,8 @@ REST_FRAMEWORK = {
         "user": "300/hour",
         "login": "10/min",
         "login_email": "10/min",
+        "register": "10/min",
+        "register_email": "10/min",
         "download": "60/hour",
         "lookup": "30/min",
     },

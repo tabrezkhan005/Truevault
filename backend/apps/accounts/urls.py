@@ -8,11 +8,12 @@ from apps.accounts.admin_api import (
 )
 from apps.accounts.health import HealthView
 from apps.accounts.lookup import UserLookupView
-from apps.accounts.views import CsrfView, LoginView, LogoutView, MeView
+from apps.accounts.views import CsrfView, LoginView, LogoutView, MeView, RegisterView
 
 urlpatterns = [
     path("csrf", CsrfView.as_view(), name="auth-csrf"),
     path("login", LoginView.as_view(), name="auth-login"),
+    path("register", RegisterView.as_view(), name="auth-register"),
     path("logout", LogoutView.as_view(), name="auth-logout"),
     path("me", MeView.as_view(), name="auth-me"),
 ]

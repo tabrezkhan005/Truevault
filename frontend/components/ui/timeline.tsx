@@ -7,9 +7,12 @@ import {
   useRef,
   useSyncExternalStore,
 } from "react";
+import Image, { type StaticImageData } from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
+
+import logoBg from "@/assets/logo/logobg.png";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger, SplitText);
@@ -72,7 +75,8 @@ export type TimelineProps = {
   mutedTextColor?: string;
   activeColor?: string;
   backgroundColor?: string;
-  imageUrl?: string;
+  /** Local static image only — remote URLs break CSP img-src 'self'. */
+  imageUrl?: StaticImageData | string;
   imageAlt?: string;
   items?: TimelineJourneyItem[];
   /** Reveal animation duration, in seconds. */
@@ -163,8 +167,8 @@ export default function Timeline({
   mutedTextColor = "var(--color-muted-foreground, #a3a3a3)",
   activeColor = "#2dd4bf",
   backgroundColor = "var(--color-background, #000000)",
-  imageUrl = "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80",
-  imageAlt = "Desk with documents and a laptop ready for secure sharing",
+  imageUrl,
+  imageAlt = "TrustVault — secure document sharing",
   items = defaultJourneyItems,
   duration,
   scrollDuration = 1.2,
@@ -403,13 +407,15 @@ export default function Timeline({
           ref={wholeSliderRef}
           className="mr-[2vw] flex h-[30vw] w-[240vw] max-w-none items-center gap-[5vw] px-[5vw] max-[600px]:h-[80vh] max-[600px]:w-[800vw] max-[600px]:px-[7vw]"
         >
-          <div className="h-full w-[30vw] overflow-hidden rounded-[1vw] max-[600px]:h-[65vw] max-[600px]:w-[85vw] max-[600px]:rounded-[5vw]">
-            {/* eslint-disable-next-line @next/next/no-img-element -- remote Unsplash hero still; next/image would need remotePatterns */}
-            <img
-              src={imageUrl}
+          <div className="relative h-full w-[30vw] overflow-hidden rounded-[1vw] max-[600px]:h-[65vw] max-[600px]:w-[85vw] max-[600px]:rounded-[5vw]">
+            <Image
+              src={imageUrl ?? logoBg}
               alt={imageAlt}
+              fill
+              sizes="30vw"
               draggable={false}
-              className="h-full w-full object-cover"
+              className="object-cover"
+              priority={false}
             />
           </div>
 

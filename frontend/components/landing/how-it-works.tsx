@@ -1,10 +1,12 @@
 "use client";
 
 import Timeline from "@/components/ui/timeline";
+import logoBg from "@/assets/logo/logobg.png";
 
 /**
  * How-it-works section: horizontal scroll timeline of TrustVault's access path.
  * Keeps #how-it-works for nav anchors; colours match the black / teal landing.
+ * Image is local (CSP img-src 'self') — no third-party CDNs.
  */
 export function HowItWorksSection() {
   return (
@@ -15,8 +17,8 @@ export function HowItWorksSection() {
       textColor="#ededed"
       mutedTextColor="#a3a3a3"
       activeColor="#2dd4bf"
-      imageUrl="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80"
-      imageAlt="Documents and laptop on a desk — the kind of files TrustVault protects"
+      imageUrl={logoBg}
+      imageAlt="TrustVault mark — the product this journey describes"
       duration={1.4}
     />
   );

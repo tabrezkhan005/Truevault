@@ -47,12 +47,14 @@ def test_anonymous_blocked_except_public_routes():
     allowed_anonymous = {
         ("/api/auth/csrf", "get"),
         ("/api/auth/login", "post"),
+        ("/api/auth/register", "post"),
         ("/api/health/", "get"),
     }
 
     probes = [
         ("/api/auth/csrf", "get"),
         ("/api/auth/login", "post"),
+        ("/api/auth/register", "post"),
         ("/api/health/", "get"),
         ("/api/auth/logout", "post"),
         ("/api/auth/me", "get"),
@@ -81,6 +83,7 @@ def test_public_routes_use_allow_any():
         if (
             path.startswith("api/auth/csrf")
             or path.startswith("api/auth/login")
+            or path.startswith("api/auth/register")
             or path.startswith("api/health")
         ):
             perms = view_cls.permission_classes

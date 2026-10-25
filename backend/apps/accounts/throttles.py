@@ -43,3 +43,19 @@ class LoginEmailRateThrottle(SimpleRateThrottle):
             "scope": self.scope,
             "ident": digest,
         }
+
+
+class RegisterRateThrottle(SimpleRateThrottle):
+    """10/min per IP for signup — separate scope from login so tests/users do not collide."""
+
+    scope = "register"
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {
+            "scope": self.scope,
+            "ident": self.get_ident(request),
+        }
+
+
+class RegisterEmailRateThrottle(LoginEmailRateThrottle):
+    scope = "register_email"

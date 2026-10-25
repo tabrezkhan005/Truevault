@@ -26,6 +26,7 @@ class AuditEvent(models.Model):
         LOGIN = "login", "login"
         LOGIN_FAILED = "login_failed", "login_failed"
         LOGOUT = "logout", "logout"
+        REGISTER = "register", "register"
         UPLOAD = "upload", "upload"
         DOWNLOAD = "download", "download"
         EDIT = "edit", "edit"

@@ -7,6 +7,7 @@ Derived from `backend/config/urls.py` and view docstrings. Default DRF permissio
 | GET | `/api/health/` | Anyone (`AllowAny`) | 200 `{ok}` | No DB/audit writes |
 | GET | `/api/auth/csrf` | Anyone | 200; sets CSRF cookie | |
 | POST | `/api/auth/login` | Anyone (throttled) | 200 user `{id,email,role}` | 400 invalid credentials (same message) |
+| POST | `/api/auth/register` | Anyone (throttled) | 201 user + session | Body `email`, `password` (≥12), `role` `viewer`\|`owner`\|`admin`; duplicate email 400. Challenge demo: open signup (anyone can mint admin) |
 | POST | `/api/auth/logout` | Authenticated | 200 | |
 | GET | `/api/auth/me` | Authenticated | 200 `{id,email,role}` | Role not writable |
 | GET | `/api/users/lookup/?email=` | Owner or admin (throttled) | 200 `{id,email}` | Exact match; 404 if missing |

@@ -23,6 +23,10 @@ Secure document-sharing for a hiring challenge: grants, revoke-now, append-only 
 | **owner** | Upload; full control of own docs; grant/revoke |
 | **admin** | Users + audit metadata; **not** file bytes without a grant |
 
+## Create account (judges)
+
+Use **Create account** on the landing sign-in modal: choose role **viewer**, **owner**, or **admin**, password ≥12 characters. You are signed in immediately. (Open signup is intentional for the challenge — anyone can create an admin.)
+
 ## Seed accounts (local `seed_demo`)
 
 Password for all (default; override with env `SEED_DEMO_PASSWORD`): **`DemoPass123!`**

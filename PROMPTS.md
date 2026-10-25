@@ -1,4 +1,4 @@
-Entries: 22 total | Authorisation/access-control/audit entries: 7 (need >= 2)
+Entries: 23 total | Authorisation/access-control/audit entries: 8 (need >= 2)
 
 ## Tools used
 
@@ -195,10 +195,18 @@ Entries: 22 total | Authorisation/access-control/audit entries: 7 (need >= 2)
 - Fixed: conftest stores real sha256; Cache-Control middleware uses setdefault so download can keep `private, no-store`.
 - Commit: TODO(you)
 
+### Entry 23 - 2026-10-25 ~15:15 IST - Open signup with role picker [tag: authz]
+
+- Asked: Let judges create an account, choose role (viewer/owner/admin), sign in; previously signup was closed / admin-only seed.
+- Produced: `POST /api/auth/register` (AllowAny, throttled, password validators, role choice, auto session); UI role select on Create account; tests `test_register_*`; API/README notes. Residual: anyone can mint admin (accepted for challenge).
+- Wrong: n/a yet
+- Fixed: n/a
+- Commit: TODO(you) — agent must not git push per AGENTS.md
+
 ## Open items
 
-- TODO(you): review Entries 1–22 wording and fill "Wrong" where still TODO.
-- TODO(you): paste commit links for Entries 1–22.
+- TODO(you): review Entries 1–23 wording and fill "Wrong" where still TODO.
+- TODO(you): paste commit links for Entries 1–23; push after review (agent cannot push).
 - TODO(you): walk `docs/ROLE_CHECKLIST.md` Manual result column on live site.
 - TODO(you): after deploy, record audit `head_seq`/`head_hash` offline; confirm HSTS/CSP in browser; CSP console for violations.
 - TODO(you): set Render + Vercel env from README table; migrate + `seed_demo` on Render.

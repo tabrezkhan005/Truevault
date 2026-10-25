@@ -5,9 +5,19 @@ import type { NextConfig } from "next";
  * injects inline scripts without nonces in this setup. That weakens XSS
  * defence — residual risk, not "locked down".
  *
+ * Dev only: 'unsafe-eval' — React/Turbopack need eval() for debug stacks.
+ * Production omits unsafe-eval (React does not use eval there).
+ *
  * Rollback CSP: remove the Content-Security-Policy entry from headers() below
  * and redeploy; other headers can stay.
  */
+const isDev = process.env.NODE_ENV !== "production";
+const scriptSrc = [
+  "'self'",
+  "'unsafe-inline'",
+  ...(isDev ? ["'unsafe-eval'"] : []),
+].join(" ");
+
 const securityHeaders = [
   {
     key: "Strict-Transport-Security",
@@ -30,7 +40,7 @@ const securityHeaders = [
       "default-src 'self'",
       "img-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
-      "script-src 'self' 'unsafe-inline'",
+      `script-src ${scriptSrc}`,
       "connect-src 'self'",
       "frame-ancestors 'none'",
       "base-uri 'self'",

@@ -10,7 +10,11 @@ import { ChevronLeft, Loader2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { cn } from "@/lib/utils";
-import { loginWithPassword } from "@/lib/auth-api";
+import {
+  loginWithPassword,
+  registerWithPassword,
+  type SignupRole,
+} from "@/lib/auth-api";
 import { Button } from "@/components/ui/button";
 import logoBg from "@/assets/logo/logobg.png";
 
@@ -107,9 +111,9 @@ export default function Login03({
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [confirm, setConfirm] = React.useState("");
+  const [role, setRole] = React.useState<SignupRole>("viewer");
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [signupNotice, setSignupNotice] = React.useState<string | null>(null);
 
   const isSignIn = mode === "signin";
   const duration = reduceMotion ? 0 : 0.32;
@@ -117,23 +121,40 @@ export default function Login03({
   function switchMode(next: AuthMode) {
     if (next === mode) return;
     setError(null);
-    setSignupNotice(null);
     onModeChange(next);
   }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-    setSignupNotice(null);
 
     if (mode === "signup") {
       if (password !== confirm) {
         setError("Passwords do not match.");
         return;
       }
-      setSignupNotice(
-        "Accounts are created by an admin for this challenge. Use a seed account to sign in.",
-      );
+      if (password.length < 12) {
+        setError("Password must be at least 12 characters.");
+        return;
+      }
+      setSubmitting(true);
+      try {
+        const result = await registerWithPassword(
+          email.trim(),
+          password,
+          role,
+        );
+        if (!result.ok) {
+          setError(result.detail);
+          return;
+        }
+        onSuccess?.(result.user);
+        onClose();
+      } catch {
+        setError("Could not reach the server. Try again in a moment.");
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
 
@@ -247,7 +268,7 @@ export default function Login03({
               >
                 {isSignIn
                   ? "Email and password. Sessions are HttpOnly — nothing in localStorage."
-                  : "Self-serve signup is closed for this challenge. Ask an admin, or sign in with a seed account."}
+                  : "Create an account, pick a role (viewer / owner / admin), then you are signed in."}
               </motion.p>
             </AnimatePresence>
           </div>
@@ -331,14 +352,14 @@ export default function Login03({
             <AnimatePresence initial={false}>
               {!isSignIn ? (
                 <motion.div
-                  key="confirm"
+                  key="signup-extra"
                   initial={reduceMotion ? false : { opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={reduceMotion ? undefined : { opacity: 0, height: 0 }}
                   transition={{ duration, ease }}
-                  className="overflow-hidden"
+                  className="space-y-4 overflow-hidden"
                 >
-                  <div className="pb-1">
+                  <div>
                     <label htmlFor="auth-confirm" className="sr-only">
                       Confirm password
                     </label>
@@ -351,8 +372,30 @@ export default function Login03({
                       value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
                       className={fieldClass}
-                      placeholder="Confirm password"
+                      placeholder="Confirm password (min 12 characters)"
                     />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="auth-role"
+                      className="mb-1.5 block text-xs font-medium text-muted-foreground"
+                    >
+                      Role for this account
+                    </label>
+                    <select
+                      id="auth-role"
+                      name="role"
+                      value={role}
+                      onChange={(e) => setRole(e.target.value as SignupRole)}
+                      className={fieldClass}
+                      required={!isSignIn}
+                    >
+                      <option value="viewer">Viewer — read grants only</option>
+                      <option value="owner">Owner — upload and share</option>
+                      <option value="admin">
+                        Admin — users and audit (no file bytes without a grant)
+                      </option>
+                    </select>
                   </div>
                 </motion.div>
               ) : null}
@@ -361,18 +404,6 @@ export default function Login03({
             {error ? (
               <p className="text-sm text-rose-300" role="alert">
                 {error}
-              </p>
-            ) : null}
-            {signupNotice ? (
-              <p className="text-sm text-teal-300/90" role="status">
-                {signupNotice}{" "}
-                <button
-                  type="button"
-                  className="underline underline-offset-4"
-                  onClick={() => switchMode("signin")}
-                >
-                  Go to sign in
-                </button>
               </p>
             ) : null}
 
@@ -390,7 +421,9 @@ export default function Login03({
                 ? submitting
                   ? "Signing in…"
                   : "Continue"
-                : "Request account"}
+                : submitting
+                  ? "Creating…"
+                  : "Create account"}
             </Button>
           </form>
 
