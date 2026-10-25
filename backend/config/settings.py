@@ -22,8 +22,10 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+# Origins must be scheme+host only (no path, no trailing slash). Django compares
+# to the browser Origin header exactly — "https://app.vercel.app/" will never match.
 CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
+    origin.strip().rstrip("/")
     for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
     if origin.strip()
 ]
