@@ -1,3 +1,4 @@
+import hashlib
 import io
 
 import pytest
@@ -67,13 +68,14 @@ def users(db):
 
 @pytest.fixture
 def owned_document(db, users):
+    digest = hashlib.sha256(TXT_BYTES).hexdigest()
     doc = Document.objects.create(
         owner=users["owner_a"],
         name="a.txt",
         category="general",
         content_type_detected="text/plain",
         size_bytes=len(TXT_BYTES),
-        sha256="a" * 64,
+        sha256=digest,
     )
     DocumentContent.objects.create(document=doc, data=TXT_BYTES)
     Grant.objects.create(

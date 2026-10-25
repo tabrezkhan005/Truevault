@@ -7,9 +7,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.email_norm import normalise_email
 from apps.accounts.models import User
 from apps.accounts.serializers import LoginSerializer, MeSerializer
-from apps.accounts.throttles import LoginRateThrottle
+from apps.accounts.throttles import LoginEmailRateThrottle, LoginRateThrottle
 from apps.audit.models import AuditEvent
 from apps.audit.service import record
 
@@ -33,16 +34,16 @@ class LoginView(APIView):
 
     permission_classes = [AllowAny]
     authentication_classes = []
-    throttle_classes = [LoginRateThrottle]
+    throttle_classes = [LoginRateThrottle, LoginEmailRateThrottle]
 
     @extend_schema(request=LoginSerializer, responses={200: MeSerializer})
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data["email"]
+        email = normalise_email(serializer.validated_data["email"])
         password = serializer.validated_data["password"]
 
-        user = User.objects.filter(email__iexact=email).first()
+        user = User.objects.filter(email=email).first()
         # WHY same failure path for unknown email / bad password / inactive:
         # never reveal which check failed (no user enumeration).
         valid = user is not None and user.is_active and user.check_password(password)
@@ -60,6 +61,8 @@ class LoginView(APIView):
             )
 
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        # WHY cycle_key: prevent session fixation if an anonymous session existed.
+        request.session.cycle_key()
         record(
             request,
             action=AuditEvent.Action.LOGIN,

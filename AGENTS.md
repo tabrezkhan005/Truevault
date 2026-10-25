@@ -10,7 +10,7 @@ TrustVault is a secure document-sharing platform for a 7-day hiring challenge
 18:00 IST). Stack: Next.js (App Router, TypeScript) in `frontend\`, Django +
 Django REST Framework + PostgreSQL in `backend\`, apps in `backend\apps\`
 (accounts, documents, audit). Deploy: Django + Postgres on Render, Next.js on
-Vercel, with Next.js proxying `/api/*` to Django so the browser sees one origin.
+Vercel, with Next.js proxying `/bff/*` to Django `/api/*` so the browser sees one origin.
 Files are stored in Postgres (size-capped) because Render's disk is ephemeral.
 
 ## WHAT IT MUST DO

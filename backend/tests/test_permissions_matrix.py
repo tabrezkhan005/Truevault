@@ -2,6 +2,7 @@ import pytest
 from rest_framework import status
 
 from apps.audit.models import AuditEvent
+from apps.documents.permissions import authorize
 
 
 def _actor_client(api_client, users, key):
@@ -10,6 +11,19 @@ def _actor_client(api_client, users, key):
         return api_client
     api_client.force_authenticate(user=users[key])
     return api_client
+
+
+@pytest.mark.django_db
+def test_authorize_ignores_admin_role(users, owned_document):
+    """
+    WHY: admin must not bypass grants inside authorize().
+    visible_to() is a separate layer — this pins the chokepoint itself.
+    """
+    admin = users["admin"]
+    assert authorize(admin, owned_document, "read") is False
+    assert authorize(admin, owned_document, "download") is False
+    assert authorize(admin, owned_document, "edit") is False
+    assert authorize(admin, owned_document, "delete") is False
 
 
 @pytest.mark.django_db

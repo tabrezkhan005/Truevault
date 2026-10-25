@@ -1,6 +1,8 @@
+import hashlib
+import hmac
 from urllib.parse import quote
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.http import HttpResponse
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
@@ -48,7 +50,7 @@ class DocumentListCreateView(APIView):
     def get(self, request):
         """Who may call: authenticated users; results limited by visible_to()."""
         # WHY: always start from visible_to — search must not leak other people's docs.
-        qs = Document.objects.visible_to(request.user)
+        qs = Document.objects.visible_to(request.user).select_related("owner")
         qs, used_filters = apply_document_filters(qs, request.query_params)
         paginator = DocumentPagination()
         page = paginator.paginate_queryset(qs, request, view=self)
@@ -262,6 +264,21 @@ class DocumentDownloadView(APIView):
                 document_id=document.id
             )
             data = bytes(content.data)
+            # WHY compare_digest: refuse silently-tampered rows; never stream
+            # bytes that do not match the hash recorded at upload.
+            digest = hashlib.sha256(data).hexdigest()
+            if not hmac.compare_digest(digest, document.sha256):
+                record(
+                    request,
+                    action=AuditEvent.Action.INTEGRITY_FAILURE,
+                    outcome=AuditEvent.Outcome.DENIED,
+                    document=document,
+                    detail={"reason": "sha256_mismatch"},
+                )
+                return Response(
+                    {"detail": "Download unavailable"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
             record(
                 request,
                 action=AuditEvent.Action.DOWNLOAD,
@@ -281,6 +298,7 @@ class DocumentDownloadView(APIView):
         response["Content-Disposition"] = disposition
         response["X-Content-Type-Options"] = "nosniff"
         response["Cache-Control"] = "private, no-store"
+        response["Content-Security-Policy"] = "sandbox"
         return response
 
 
@@ -333,13 +351,23 @@ class DocumentGrantListCreateView(APIView):
         with transaction.atomic():
             existing = Grant.objects.filter(document=document, user=target).first()
             if existing is None:
-                grant = Grant.objects.create(
-                    document=document,
-                    user=target,
-                    level=level,
-                    granted_by=request.user,
-                )
-                action = AuditEvent.Action.GRANT_ADD
+                try:
+                    grant = Grant.objects.create(
+                        document=document,
+                        user=target,
+                        level=level,
+                        granted_by=request.user,
+                    )
+                    action = AuditEvent.Action.GRANT_ADD
+                except IntegrityError:
+                    # WHY: concurrent upserts race the unique (document, user).
+                    grant = Grant.objects.select_for_update().get(
+                        document=document, user=target
+                    )
+                    grant.level = level
+                    grant.granted_by = request.user
+                    grant.save(update_fields=["level", "granted_by"])
+                    action = AuditEvent.Action.GRANT_CHANGE
             else:
                 existing.level = level
                 existing.granted_by = request.user

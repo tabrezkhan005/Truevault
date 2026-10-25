@@ -110,9 +110,17 @@ class AdminAuditVerifyView(APIView):
     @extend_schema(responses={200: {"type": "object"}})
     def get(self, request):
         ok, broken_seq = verify_audit_chain()
+        head = AuditEvent.objects.order_by("-seq").first()
+        head_payload = {
+            "head_seq": head.seq if head else 0,
+            "head_hash": head.hash if head else "",
+        }
         if ok:
-            return Response({"ok": True})
-        return Response({"ok": False, "broken_seq": broken_seq}, status=409)
+            return Response({"ok": True, **head_payload})
+        return Response(
+            {"ok": False, "broken_seq": broken_seq, **head_payload},
+            status=409,
+        )
 
 
 class AdminUserListView(APIView):

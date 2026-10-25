@@ -9,6 +9,9 @@ from dataclasses import dataclass
 import filetype
 
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+MAX_ZIP_MEMBERS = 200
+MAX_ZIP_UNCOMPRESSED = 20 * 1024 * 1024
+MAX_ZIP_RATIO = 100  # uncompressed / compressed per member
 
 # extension -> expected logical type
 ALLOWED_EXTENSIONS = {
@@ -42,9 +45,7 @@ def sanitise_filename(name: str) -> str:
     """Basename only; never use the result as a storage key."""
     if not name:
         return "unnamed"
-    # Strip any path components (Windows and POSIX).
     base = name.replace("\\", "/").split("/")[-1]
-    # Remove control chars and leading dots.
     base = re.sub(r"[\x00-\x1f\x7f]", "", base)
     base = base.lstrip(".")
     base = re.sub(r"\s+", " ", base).strip()
@@ -53,9 +54,42 @@ def sanitise_filename(name: str) -> str:
     return base[:120]
 
 
-def _office_kind(data: bytes) -> str | None:
+def _assert_safe_office_zip(data: bytes) -> None:
+    """
+    WHY: OOXML is ZIP. Zip bombs, path tricks, and macro streams must not
+    reach the detector or the database.
+    """
     if not zipfile.is_zipfile(io.BytesIO(data)):
-        return None
+        raise UploadValidationError("File content does not match Office extension")
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            infos = zf.infolist()
+            if len(infos) > MAX_ZIP_MEMBERS:
+                raise UploadValidationError("Office archive has too many members")
+            total_uncomp = 0
+            for info in infos:
+                name = info.filename or ""
+                norm = name.replace("\\", "/")
+                if "\x00" in name:
+                    raise UploadValidationError("Office archive member name is invalid")
+                if norm.startswith("/") or norm.startswith("../") or "/../" in f"/{norm}/":
+                    raise UploadValidationError("Office archive member path is invalid")
+                lower = norm.lower()
+                if lower.endswith("vbaproject.bin") or "vbaproject.bin" in lower:
+                    raise UploadValidationError("Macro-enabled Office files are not allowed")
+                total_uncomp += max(info.file_size, 0)
+                if info.compress_size and info.file_size:
+                    ratio = info.file_size / max(info.compress_size, 1)
+                    if ratio > MAX_ZIP_RATIO and info.file_size > 1024:
+                        raise UploadValidationError("Office archive compression ratio too high")
+            if total_uncomp > MAX_ZIP_UNCOMPRESSED:
+                raise UploadValidationError("Office archive uncompressed size too large")
+    except zipfile.BadZipFile as exc:
+        raise UploadValidationError("File content does not match Office extension") from exc
+
+
+def _office_kind(data: bytes) -> str | None:
+    _assert_safe_office_zip(data)
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
             names = zf.namelist()
@@ -94,7 +128,6 @@ def _detect_kind(data: bytes, extension: str) -> tuple[str, str]:
     if kind is None:
         raise UploadValidationError("Unable to detect file type")
     detected_ext = kind.extension
-    # filetype uses "jpg" for JPEG.
     if detected_ext == "jpeg":
         detected_ext = "jpg"
     logical = ALLOWED_EXTENSIONS.get(detected_ext)
@@ -107,7 +140,6 @@ def validate_upload(uploaded_file, fallback_name: str = "") -> ValidatedUpload:
     if uploaded_file is None:
         raise UploadValidationError("No file provided")
 
-    # Reject early by declared size when available.
     declared = getattr(uploaded_file, "size", None)
     if declared is not None and declared > MAX_UPLOAD_BYTES:
         raise UploadValidationError("File exceeds 5 MB limit")
@@ -121,6 +153,10 @@ def validate_upload(uploaded_file, fallback_name: str = "") -> ValidatedUpload:
         raise UploadValidationError("File exceeds 5 MB limit")
 
     original_name = getattr(uploaded_file, "name", "") or fallback_name or "unnamed"
+    # WHY reject before sanitise: stripping NUL would hide an attack attempt.
+    if "\x00" in original_name:
+        raise UploadValidationError("Filename must not contain NUL bytes")
+
     safe_name = sanitise_filename(original_name)
     if "." not in safe_name:
         raise UploadValidationError("File extension is required")

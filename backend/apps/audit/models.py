@@ -40,6 +40,7 @@ class AuditEvent(models.Model):
         SEARCH = "search", "search"
         AI_SUGGEST = "ai_suggest", "ai_suggest"
         AI_DECISION = "ai_decision", "ai_decision"
+        INTEGRITY_FAILURE = "integrity_failure", "integrity_failure"
 
     class Outcome(models.TextChoices):
         ALLOWED = "allowed", "allowed"

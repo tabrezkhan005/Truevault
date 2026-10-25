@@ -1,4 +1,5 @@
 import hashlib
+import os
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -6,8 +7,8 @@ from django.db import transaction
 from apps.accounts.models import User
 from apps.documents.models import Document, DocumentContent, Grant
 
-# Obviously fake demo passwords — printed once; not stored in the repo as seed data.
-DEMO_PASSWORD = "DemoPass123!"
+# Public demo default (also in README). Override with SEED_DEMO_PASSWORD for deploy.
+DEMO_PASSWORD = os.environ.get("SEED_DEMO_PASSWORD", "DemoPass123!")
 
 TXT_SAMPLE = b"TrustVault demo document for owner A.\n"
 # Minimal PDF header; enough for filetype/pdf detection in casual demo use.

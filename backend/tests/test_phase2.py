@@ -255,6 +255,11 @@ def test_deactivate_flushes_session(api_client, users):
     assert victim.is_active is False
     assert AuditEvent.objects.filter(action=AuditEvent.Action.USER_DEACTIVATE).exists()
 
+    # Session row must be deleted (not merely inactive-user denial).
+    from django.contrib.sessions.models import Session
+
+    assert not Session.objects.filter(session_key=session_key).exists()
+
     # Session gone — a client using that session is anonymous.
     session_client = APIClient()
     session_client.cookies["sessionid"] = session_key
@@ -270,4 +275,58 @@ def test_detail_audits_view_not_list(api_client, users, owned_document):
         action=AuditEvent.Action.VIEW,
         outcome=AuditEvent.Outcome.ALLOWED,
         document_id=owned_document.id,
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_non_owner_cannot_upload(api_client, users):
+    """WHY: upload is role=owner only — viewers/admins must not create documents."""
+    upload = SimpleUploadedFile("note.txt", b"hello\n", content_type="text/plain")
+    for key in ("viewer_none", "viewer_read", "admin"):
+        api_client.force_authenticate(user=users[key])
+        response = api_client.post(
+            "/api/documents/",
+            {"file": upload, "category": "t"},
+            format="multipart",
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN, key
+
+
+@pytest.mark.django_db
+def test_admin_can_change_other_user_role(api_client, users):
+    """Admin may change another user's role; event is audited."""
+    target = users["viewer_none"]
+    api_client.force_authenticate(user=users["admin"])
+    response = api_client.patch(
+        f"/api/admin/users/{target.id}/",
+        {"role": "owner"},
+        format="json",
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["role"] == "owner"
+    target.refresh_from_db()
+    assert target.role == "owner"
+    assert AuditEvent.objects.filter(
+        action=AuditEvent.Action.ROLE_CHANGE,
+        outcome=AuditEvent.Outcome.ALLOWED,
+        target_user_id=target.id,
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_grant_unknown_user_id_refused(api_client, users, owned_document):
+    """Missing user_id must not create a grant (same path as inactive)."""
+    import uuid
+
+    api_client.force_authenticate(user=users["owner_a"])
+    response = api_client.post(
+        f"/api/documents/{owned_document.id}/grants/",
+        {"user_id": str(uuid.uuid4()), "level": "read"},
+        format="json",
+    )
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert AuditEvent.objects.filter(
+        action=AuditEvent.Action.GRANT_ADD,
+        outcome=AuditEvent.Outcome.DENIED,
+        reason="validation_failed",
     ).exists()

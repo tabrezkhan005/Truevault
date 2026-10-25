@@ -3,6 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.email_norm import normalise_email
 from apps.accounts.models import User
 from apps.documents.permissions import IsOwnerOrAdminRole
 from apps.documents.throttles import LookupRateThrottle
@@ -30,10 +31,12 @@ class UserLookupView(APIView):
         }
     )
     def get(self, request):
-        email = (request.query_params.get("email") or "").strip()
+        email = normalise_email(request.query_params.get("email") or "")
         if not email:
             return Response({"detail": "email is required"}, status=400)
-        user = User.objects.filter(email__iexact=email, is_active=True).only(
+        if "\x00" in email or len(email) > 254:
+            return Response({"detail": "Invalid email"}, status=400)
+        user = User.objects.filter(email=email, is_active=True).only(
             "id", "email"
         ).first()
         if user is None:

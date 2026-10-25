@@ -5,6 +5,7 @@ from apps.documents.models import Document, Grant
 
 class DocumentSerializer(serializers.ModelSerializer):
     owner_id = serializers.UUIDField(source="owner.id", read_only=True)
+    owner_email = serializers.EmailField(source="owner.email", read_only=True)
     effective_level = serializers.SerializerMethodField()
 
     class Meta:
@@ -19,6 +20,7 @@ class DocumentSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "owner_id",
+            "owner_email",
             "effective_level",
         )
         read_only_fields = fields
@@ -34,6 +36,10 @@ class DocumentSerializer(serializers.ModelSerializer):
 
 class DocumentListSerializer(serializers.ModelSerializer):
     owner_id = serializers.UUIDField(source="owner.id", read_only=True)
+    owner_email = serializers.EmailField(source="owner.email", read_only=True)
+    # WHY: list rows are already limited by visible_to(); exposing the caller's
+    # level here is UX only — authorize() still runs on every mutating route.
+    effective_level = serializers.SerializerMethodField()
 
     class Meta:
         model = Document
@@ -47,8 +53,18 @@ class DocumentListSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "owner_id",
+            "owner_email",
+            "effective_level",
         )
         read_only_fields = fields
+
+    def get_effective_level(self, obj):
+        request = self.context.get("request")
+        if request is None:
+            return None
+        from apps.documents.permissions import effective_level
+
+        return effective_level(request.user, obj)
 
 
 class DocumentUploadSerializer(serializers.Serializer):
