@@ -29,6 +29,14 @@ function forwardRequestHeaders(req: NextRequest): Headers {
     const value = req.headers.get(name);
     if (value) headers.set(name, value);
   }
+  // WHY Origin/Referer: Django CSRF on HTTPS rejects mutating requests with
+  // "Referer checking failed - no Referer" when the BFF omits these. The
+  // browser sent them to /bff; we must forward them to Django, and fall back
+  // to the page origin when a privacy setting strips Referer.
+  const origin = req.headers.get("origin") ?? req.nextUrl.origin;
+  headers.set("origin", origin);
+  const referer = req.headers.get("referer");
+  headers.set("referer", referer || `${origin}/`);
   return headers;
 }
 
